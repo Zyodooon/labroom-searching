@@ -1,24 +1,27 @@
-# labroom-searching
+# Apt手動インストールパッケージの共有について
 
-Building  
-cd ~/ros_ws/  
-make  
-source install/setup.bash  
+## セットアップ
+  
+以下を実行
+  
+```bash
+$ sudo apt install pre-commit
+$ pre-commit install
+$ make
+```
+  
+commitのタイミングで自動でaptのパッケージリストがpackage.txtに記録される  
+強制的にmarkしたい場合は`make mark`.　
 
-Excuting  
-ros2 launch bringup main.launch.py  
-ros2 launch bringup rviz2.launch.py  
+## 依存解決
+  
+Makefileがある場所(このプロジェクトのroot)で以下を実行  
+他人が入れているpkgが自動で入る
 
-if you use school wifi, do following commands  
+```bash
+$ make sync
+```
 
-* server side (robot)  
-fastdds discovery --server-id 0  
-control + Z  
-bg  
-export ROS_DISCOVERY_SERVER=[here is server ip address]:11811  
+## pre-commit無効化
 
-* client side   
-export ROS_DISCOVERY_SERVER=[here is server ip address]:11811  
-
-https://qiita.com/natzv_jp/items/b89253ba3504cdd2af6b  
-refer to this page  
+`pre-commit uninstall`で無効化できる。commit時に無視して通したいときは、`git commit -m "str" --no-verify`オプションをつける。
