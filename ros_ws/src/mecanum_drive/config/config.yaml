@@ -1,0 +1,6 @@
+/mecanum_drive_node:
+  ros__parameters:
+    wheel_radius: 0.05 // 車輪半径[m]
+    wheel_base: 0.20 // 前後車輪中心間距離[m]
+    tread: 0.20 // 左右車輪間距離[m]
+    max_wheel_rpm: 330.0 // モーターの最大速度

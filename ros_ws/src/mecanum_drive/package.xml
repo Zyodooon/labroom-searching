@@ -1,20 +1,21 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>joy_driver</name>
+  <name>mecanum_drive</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Mecanum kinematics node for four-wheel drive targets.</description>
   <maintainer email="ponqoo@outlook.com">user</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>rclcpp</depend>
-  <depend>sensor_msgs</depend>
-  <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
 
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>ddsm_controller</exec_depend>
   <exec_depend>joy</exec_depend>
+  <exec_depend>joy_driver</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>

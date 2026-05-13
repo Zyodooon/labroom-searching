@@ -6,6 +6,12 @@ joy_node:
 
 joy_driver_node:
   ros__parameters:
-    axis_linear: 1
+    axis_linear_x: 1
+    axis_linear_y: 0
+    axis_trigger_l2: 7
+    axis_trigger_r2: 8
     deadzone_linear: 0.05
-    max_rpm: 330
+    deadzone_angular: 0.05
+    max_linear_x: 1.0
+    max_linear_y: 1.0
+    max_angular_z: 1.5

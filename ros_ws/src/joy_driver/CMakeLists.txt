@@ -25,6 +25,10 @@ install(TARGETS joy_driver_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(DIRECTORY include/
+  DESTINATION include
+)
+
 # Install launch and config files
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
