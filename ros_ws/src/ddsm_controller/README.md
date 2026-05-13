@@ -1,16 +1,30 @@
-# ddsm_controllerとkeyboard_teleopの使い方
-(まだやったことない)
+# ddsm_controller
 
-1. ddsm_controllerの起動
-```ros2 run ddsm_controller ddsm_controller_node```
-2. keyboard_teleopの起動
-```ros2 run teleop_twist_keyboard teleop_twist_keyboard```
-3. keyboard_teleopのコマンドを入力してDDSMを操作する
+4 輪分の RPM 指令を DDSM モータへ送る ROS 2 ノード。
+
+## Topic
+
+- subscribe: `/wheel_rpm_targets`
+- publish: `/motor_vel_feedback`
+- type: `std_msgs/msg/Float64MultiArray`
+
+配列の順序は以下で固定:
+
+1. front_left
+2. front_right
+3. rear_left
+4. rear_right
+
+## Parameters
+
+- `port_name`
+- `baud_rate`
+- `motor_ids`
+- `max_rpm`
+- `enable_feedback`
+
+## Launch
+
 ```bash
-- a: 前進1.0m/s
-- s: 前進1.5m/s
-- d: 前進2.0m/s
-- f: 後進1.0m/s
-- g: 後進1.5m/s
-- h: 後進2.0m/s
+ros2 launch ddsm_controller launch.py
 ```

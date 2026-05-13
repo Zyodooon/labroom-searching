@@ -1,6 +1,7 @@
 /ddsm_controller_node:
   ros__parameters:
-    port_name: "/dev/ttyACM0"
+    port_name: "/dev/mecanum"
     baud_rate: 115200
-    motor_id: 1
-    
+    motor_ids: [1, 2, 3, 4]
+    max_rpm: 330.0
+    enable_feedback: false
