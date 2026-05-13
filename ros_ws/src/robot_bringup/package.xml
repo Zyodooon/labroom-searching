@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>robot_bringup</name>
+  <version>0.0.0</version>
+  <description>Launch files for the manual drive stack.</description>
+  <maintainer email="ponqoo@outlook.com">user</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>ddsm_controller</exec_depend>
+  <exec_depend>joy</exec_depend>
+  <exec_depend>joy_driver</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>mecanum_drive</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

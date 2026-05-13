@@ -5,22 +5,18 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
+def package_config(package_name):
+    return os.path.join(
+        get_package_share_directory(package_name),
+        'config',
+        'config.yaml',
+    )
+
+
 def generate_launch_description():
-    joy_config = os.path.join(
-        get_package_share_directory('joy_driver'),
-        'config',
-        'config.yaml',
-    )
-    mecanum_config = os.path.join(
-        get_package_share_directory('mecanum_drive'),
-        'config',
-        'config.yaml',
-    )
-    ddsm_config = os.path.join(
-        get_package_share_directory('ddsm_controller'),
-        'config',
-        'config.yaml',
-    )
+    joy_config = package_config('joy_driver')
+    mecanum_config = package_config('mecanum_drive')
+    ddsm_config = package_config('ddsm_controller')
 
     return LaunchDescription(
         [

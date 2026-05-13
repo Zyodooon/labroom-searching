@@ -1,27 +1,34 @@
 #include "ddsm_controller/ddsm_controller.hpp"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <functional>
 #include <thread>
 
-namespace {
+namespace
+{
 constexpr std::size_t DdsmFrameLength = 10;
 constexpr std::size_t DdsmCrcInputLength = DdsmFrameLength - 1;
+constexpr std::size_t WheelCount = 4;
+constexpr std::array<const char *, WheelCount> WheelNames = {
+  "front_left", "front_right", "rear_left", "rear_right"};
 } // namespace
 
-DDSMController::DDSMController() : rclcpp::Node("ddsm_controller_node") {
+DDSMController::DDSMController()
+: rclcpp::Node("ddsm_controller_node")
+{
   declare_parameters();
   get_parameters();
 
   wheel_rpm_subscription_ =
-      this->create_subscription<std_msgs::msg::Float64MultiArray>(
+    this->create_subscription<std_msgs::msg::Float64MultiArray>(
           "/wheel_rpm_targets", 10,
           std::bind(&DDSMController::velocity_callback, this,
                     std::placeholders::_1));
   motor_vel_publisher_ =
-      this->create_publisher<std_msgs::msg::Float64MultiArray>(
+    this->create_publisher<std_msgs::msg::Float64MultiArray>(
           "/motor_vel_feedback", 10);
 
   setup_serial_port(port_name_, static_cast<unsigned int>(baud_rate_));
@@ -33,24 +40,89 @@ DDSMController::DDSMController() : rclcpp::Node("ddsm_controller_node") {
   }
 }
 
-void DDSMController::declare_parameters() {
+void DDSMController::declare_parameters()
+{
   this->declare_parameter<std::string>("port_name", "/dev/ttyACM0");
   this->declare_parameter<int>("baud_rate", 115200);
   this->declare_parameter<std::vector<int64_t>>("motor_ids", {1, 2, 3, 4});
+  this->declare_parameter<int>("front_left_motor_id", 1);
+  this->declare_parameter<int>("front_right_motor_id", 2);
+  this->declare_parameter<int>("rear_left_motor_id", 3);
+  this->declare_parameter<int>("rear_right_motor_id", 4);
   this->declare_parameter<double>("max_rpm", 330.0);
   this->declare_parameter<bool>("enable_feedback", false);
 }
 
-void DDSMController::get_parameters() {
+void DDSMController::get_parameters()
+{
   port_name_ = this->get_parameter("port_name").as_string();
   baud_rate_ = this->get_parameter("baud_rate").as_int();
-  motor_ids_ = this->get_parameter("motor_ids").as_integer_array();
+  const std::vector<int64_t> legacy_motor_ids =
+    this->get_parameter("motor_ids").as_integer_array();
+  const std::vector<int64_t> named_motor_ids = {
+    this->get_parameter("front_left_motor_id").as_int(),
+    this->get_parameter("front_right_motor_id").as_int(),
+    this->get_parameter("rear_left_motor_id").as_int(),
+    this->get_parameter("rear_right_motor_id").as_int(),
+  };
+  const auto & parameter_overrides =
+    this->get_node_parameters_interface()->get_parameter_overrides();
+  const bool has_named_motor_id_override =
+    parameter_overrides.count("front_left_motor_id") > 0 ||
+    parameter_overrides.count("front_right_motor_id") > 0 ||
+    parameter_overrides.count("rear_left_motor_id") > 0 ||
+    parameter_overrides.count("rear_right_motor_id") > 0;
+  motor_ids_ = has_named_motor_id_override ? named_motor_ids : legacy_motor_ids;
   max_rpm_ = this->get_parameter("max_rpm").as_double();
   enable_feedback_ = this->get_parameter("enable_feedback").as_bool();
+
+  if (!validate_motor_ids()) {
+    motor_ids_.clear();
+  }
+  log_motor_id_mapping();
 }
 
-bool DDSMController::setup_serial_port(const std::string &port_name,
-                                       unsigned int baud_rate) {
+bool DDSMController::validate_motor_ids() const
+{
+  if (motor_ids_.size() != WheelCount) {
+    RCLCPP_ERROR(this->get_logger(),
+                 "Exactly %zu motor IDs are required, but got %zu.",
+                 WheelCount, motor_ids_.size());
+    return false;
+  }
+
+  for (std::size_t index = 0; index < motor_ids_.size(); ++index) {
+    const auto motor_id = motor_ids_[index];
+    if (motor_id < 0 || motor_id > 255) {
+      RCLCPP_ERROR(this->get_logger(),
+                   "%s motor ID must be in range 0-255, but got %lld.",
+                   WheelNames[index], static_cast<long long>(motor_id));
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void DDSMController::log_motor_id_mapping() const
+{
+  if (motor_ids_.size() != WheelCount) {
+    return;
+  }
+
+  RCLCPP_INFO(this->get_logger(),
+              "Motor ID mapping: front_left=%ld, front_right=%ld, "
+              "rear_left=%ld, rear_right=%ld",
+              static_cast<long>(motor_ids_[0]),
+              static_cast<long>(motor_ids_[1]),
+              static_cast<long>(motor_ids_[2]),
+              static_cast<long>(motor_ids_[3]));
+}
+
+bool DDSMController::setup_serial_port(
+  const std::string & port_name,
+  unsigned int baud_rate)
+{
   try {
     serial_port_.open(port_name);
     if (!serial_port_.is_open()) {
@@ -72,14 +144,15 @@ bool DDSMController::setup_serial_port(const std::string &port_name,
     RCLCPP_INFO(this->get_logger(), "Serial port %s initialized successfully.",
                 port_name.c_str());
     return true;
-  } catch (const boost::system::system_error &e) {
+  } catch (const boost::system::system_error & e) {
     RCLCPP_ERROR(this->get_logger(), "Serial port setup failed: %s", e.what());
     return false;
   }
 }
 
 void DDSMController::velocity_callback(
-    const std_msgs::msg::Float64MultiArray::SharedPtr msg) {
+  const std_msgs::msg::Float64MultiArray::SharedPtr msg)
+{
   if (msg->data.size() != motor_ids_.size()) {
     RCLCPP_WARN_THROTTLE(
         this->get_logger(), *this->get_clock(), 2000,
@@ -98,7 +171,7 @@ void DDSMController::velocity_callback(
   for (size_t index = 0; index < motor_ids_.size(); ++index) {
     const auto motor_id = static_cast<uint8_t>(motor_ids_[index]);
     const double clamped_rpm =
-        std::clamp(msg->data[index], -max_rpm_, max_rpm_);
+      std::clamp(msg->data[index], -max_rpm_, max_rpm_);
     if (send_velocity_command(motor_id, clamped_rpm)) {
       RCLCPP_INFO(this->get_logger(), "Sent wheel RPM %.2f to motor ID 0x%02X",
                   clamped_rpm, motor_id);
@@ -106,8 +179,10 @@ void DDSMController::velocity_callback(
   }
 }
 
-bool DDSMController::send_velocity_command(uint8_t motor_id,
-                                           double target_rpm) {
+bool DDSMController::send_velocity_command(
+  uint8_t motor_id,
+  double target_rpm)
+{
   const auto command = create_velocity_command(motor_id, target_rpm);
   if (command.empty()) {
     return false;
@@ -116,7 +191,7 @@ bool DDSMController::send_velocity_command(uint8_t motor_id,
   try {
     boost::asio::write(serial_port_, boost::asio::buffer(command));
     return true;
-  } catch (const boost::system::system_error &e) {
+  } catch (const boost::system::system_error & e) {
     RCLCPP_ERROR(this->get_logger(), "Boost Asio write failed for motor %u: %s",
                  motor_id, e.what());
     return false;
@@ -124,30 +199,32 @@ bool DDSMController::send_velocity_command(uint8_t motor_id,
 }
 
 int32_t
-DDSMController::decode_velocity_feedback(const std::vector<uint8_t> &response) {
+DDSMController::decode_velocity_feedback(const std::vector<uint8_t> & response)
+{
   if (response.size() < DdsmFrameLength) {
     RCLCPP_ERROR(this->get_logger(),
                  "Response too short to decode velocity feedback.");
     return 0;
   }
 
-  const auto velocity = static_cast<int16_t>(
-      (static_cast<uint16_t>(response[4]) << 8) |
-      static_cast<uint16_t>(response[5]));
+  const auto velocity =
+    static_cast<int16_t>((static_cast<uint16_t>(response[4]) << 8) |
+    static_cast<uint16_t>(response[5]));
   return velocity;
 }
 
-bool DDSMController::request_motor_feedback(uint8_t motor_id,
-                                            double &velocity_feedback) {
-  std::vector<uint8_t> request = {motor_id, CMD_GET_STATUS_, 0x00,
-                                  0x00,     0x00,            0x00,
-                                  0x00,     0x00,            0x00};
+bool DDSMController::request_motor_feedback(
+  uint8_t motor_id,
+  double & velocity_feedback)
+{
+  std::vector<uint8_t> request = {
+    motor_id, CMD_GET_STATUS_, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   request.push_back(calc_crc8(request));
 
   try {
     boost::asio::write(serial_port_, boost::asio::buffer(request));
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  } catch (const boost::system::system_error &e) {
+  } catch (const boost::system::system_error & e) {
     RCLCPP_ERROR(this->get_logger(),
                  "Boost Asio write failed for feedback request: %s", e.what());
     return false;
@@ -156,23 +233,24 @@ bool DDSMController::request_motor_feedback(uint8_t motor_id,
   try {
     std::vector<uint8_t> response_buffer(32);
     const size_t bytes_transferred =
-        serial_port_.read_some(boost::asio::buffer(response_buffer));
+      serial_port_.read_some(boost::asio::buffer(response_buffer));
     if (bytes_transferred == 0) {
       return false;
     }
 
     response_buffer.resize(bytes_transferred);
     velocity_feedback =
-        static_cast<double>(decode_velocity_feedback(response_buffer));
+      static_cast<double>(decode_velocity_feedback(response_buffer));
     return true;
-  } catch (const boost::system::system_error &e) {
+  } catch (const boost::system::system_error & e) {
     RCLCPP_ERROR(this->get_logger(),
                  "Boost Asio read failed for feedback request: %s", e.what());
     return false;
   }
 }
 
-void DDSMController::request_and_receive_feedback() {
+void DDSMController::request_and_receive_feedback()
+{
   if (!serial_port_.is_open() || !enable_feedback_) {
     return;
   }
@@ -192,7 +270,8 @@ void DDSMController::request_and_receive_feedback() {
   motor_vel_publisher_->publish(feedback_msg);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   rclcpp::init(argc, argv);
   auto node = std::make_shared<DDSMController>();
   rclcpp::spin(node);
@@ -200,7 +279,8 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-uint8_t DDSMController::calc_crc8(const std::vector<uint8_t> &data) {
+uint8_t DDSMController::calc_crc8(const std::vector<uint8_t> & data)
+{
   uint8_t crc = 0x00;
   const uint8_t poly = 0x8C;
   for (const auto byte : data) {
@@ -217,7 +297,8 @@ uint8_t DDSMController::calc_crc8(const std::vector<uint8_t> &data) {
 }
 
 std::vector<uint8_t>
-DDSMController::create_velocity_command(uint8_t motor_id, double target_rpm) {
+DDSMController::create_velocity_command(uint8_t motor_id, double target_rpm)
+{
   const double bounded_rpm = std::clamp(target_rpm, -max_rpm_, max_rpm_);
   const int16_t velocity = static_cast<int16_t>(std::round(bounded_rpm));
   const auto velocity_bits = static_cast<uint16_t>(velocity);

@@ -37,7 +37,11 @@ ros2 launch mecanum_drive manual_drive.launch.py
 - ジョイスティックの軸割り当て
 - 速度スケール
 - 車輪半径、ホイールベース、トレッド幅
-- DDSM のシリアルポートと motor ID
+- DDSM のシリアルポートと車輪位置ごとの motor ID
+
+メカナムのモータ ID は `ros_ws/src/ddsm_controller/config/config.yaml` で
+`front_left_motor_id`, `front_right_motor_id`, `rear_left_motor_id`,
+`rear_right_motor_id` を変更します。
 
 ## CI
 

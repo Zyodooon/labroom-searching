@@ -22,9 +22,9 @@ private:
   boost::asio::serial_port serial_port_{io_context_};
 
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr
-      wheel_rpm_subscription_;
+    wheel_rpm_subscription_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr
-      motor_vel_publisher_;
+    motor_vel_publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
 
   std::string port_name_;
@@ -35,15 +35,18 @@ private:
 
   void declare_parameters();
   void get_parameters();
+  bool validate_motor_ids() const;
+  void log_motor_id_mapping() const;
 
-  bool setup_serial_port(const std::string &port_name, unsigned int baud_rate);
+  bool setup_serial_port(const std::string & port_name, unsigned int baud_rate);
   bool send_velocity_command(uint8_t motor_id, double target_rpm);
-  bool request_motor_feedback(uint8_t motor_id, double &velocity_feedback);
+  bool request_motor_feedback(uint8_t motor_id, double & velocity_feedback);
 
-  uint8_t calc_crc8(const std::vector<uint8_t> &data);
-  std::vector<uint8_t> create_velocity_command(uint8_t motor_id,
-                                               double target_rpm);
-  int32_t decode_velocity_feedback(const std::vector<uint8_t> &response);
+  uint8_t calc_crc8(const std::vector<uint8_t> & data);
+  std::vector<uint8_t> create_velocity_command(
+    uint8_t motor_id,
+    double target_rpm);
+  int32_t decode_velocity_feedback(const std::vector<uint8_t> & response);
   void request_and_receive_feedback();
 
   void velocity_callback(const std_msgs::msg::Float64MultiArray::SharedPtr msg);

@@ -29,8 +29,8 @@ install(DIRECTORY include/
   DESTINATION include
 )
 
-# Install launch and config files
-install(DIRECTORY launch config
+# Install config files
+install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME}
 )
 

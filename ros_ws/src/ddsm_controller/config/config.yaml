@@ -2,6 +2,14 @@
   ros__parameters:
     port_name: "/dev/mecanum"
     baud_rate: 115200
+    # mecanum_drive が出す /wheel_rpm_targets の順番:
+    # front_left, front_right, rear_left, rear_right
+    # 取り付けや配線で DDSM の ID がずれている場合はここだけ変更する。
+    front_left_motor_id: 1
+    front_right_motor_id: 2
+    rear_left_motor_id: 3
+    rear_right_motor_id: 4
+    # 旧形式も互換用に使用可能: [front_left, front_right, rear_left, rear_right]
     motor_ids: [1, 2, 3, 4]
     max_rpm: 330.0
     enable_feedback: false

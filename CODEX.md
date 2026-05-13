@@ -27,6 +27,11 @@
 - Start every session by reading `CODEX.md` first and then `WORKING.md`.
 - Use `WORKING.md` as the running handoff note for what was done and what to do next.
 
+## Collaboration Rules
+- Before modifying files, explain which files will be changed and what will be changed.
+- Wait for user approval before applying edits.
+- Running read-only commands, builds, and tests does not require approval unless they need escalated permissions.
+
 ## Runtime Flow
 - Manual driving stack:
   - `joy_node` publishes `/joy`
